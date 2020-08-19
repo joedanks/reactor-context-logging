@@ -42,7 +42,7 @@ class ReactorLoggerTest {
     @Test
     void shouldAddToMDCForLog() {
         Mono<String> testMono = Mono.just("test")
-                .transform(logger.logMessageInfoWithContext((s) -> assertEquals("value", MDC.get("key"))))
+                .transform(logger.logMessageMonoWithContext((s) -> assertEquals("value", MDC.get("key"))))
                 .transform(logger.addToContext("key", "value"));
 
         StepVerifier.create(testMono)
@@ -55,7 +55,7 @@ class ReactorLoggerTest {
         Mono<String> testMono = Mono.just("test")
                 .transform(logger.addToContext("key", "value"))
                 .transform(
-                        logger.logMessageInfoWithContext(
+                        logger.logMessageMonoWithContext(
                                 (s) -> assertNull(MDC.get("key"))
                         )
                 );

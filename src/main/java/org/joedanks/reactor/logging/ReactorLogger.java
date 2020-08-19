@@ -1,6 +1,7 @@
 package org.joedanks.reactor.logging;
 
 import org.slf4j.MDC;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -15,9 +16,28 @@ public class ReactorLogger {
 
     static final String MDC_KEY = "mdc_key";
 
-    public <T> Function<Mono<T>, Mono<T>> logMessageInfoWithContext(Consumer<T> loggerConsumer) {
+    public <T> Function<Mono<T>, Mono<T>> logMessageMonoWithContext(Consumer<T> loggerConsumer) {
         return (mono) ->
                 mono.doOnEach(signal -> {
+                    if (signal.isOnNext()) {
+                        List<MDC.MDCCloseable> closeableList = signal.getContext()
+                                .getOrDefault(MDC_KEY, new HashMap<String, String>())
+                                .entrySet()
+                                .stream()
+                                .map(entry -> MDC.putCloseable(entry.getKey(), entry.getValue()))
+                                .collect(toList());
+                        try {
+                            loggerConsumer.accept(signal.get());
+                        } finally {
+                            closeableList.forEach(MDC.MDCCloseable::close);
+                        }
+                    }
+                });
+    }
+
+    public <T> Function<Flux<T>, Flux<T>> logMessageEachFluxWithContext(Consumer<T> loggerConsumer) {
+        return (flux) ->
+                flux.doOnEach(signal -> {
                     if (signal.isOnNext()) {
                         List<MDC.MDCCloseable> closeableList = signal.getContext()
                                 .getOrDefault(MDC_KEY, new HashMap<String, String>())
